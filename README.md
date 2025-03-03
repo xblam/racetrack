@@ -15,3 +15,7 @@ the order of checks for step will be:
 10. if not then give reward and restart the game
 
 due to the nature of how 2d arrays work in python, we will be going with y coord then x coord
+
+
+the most intuitive way to implement the monte carlo agent's q table would be to just make a dictionary, where each key are the states (pos, vel, rew, end), and each of the values is essentially a dictionary of all possible moves, with predicted scores for each move.
+This means that we can search up state action pairs like this: q[state][action] = value
