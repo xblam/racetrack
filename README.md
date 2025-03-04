@@ -25,3 +25,6 @@ This means that we can search up state action pairs like this: q[state][action] 
 when it comes to the monte carlo agent, i plan to make it as follows:
 1. we need to initialize it
 2. first visit to update
+
+
+implementing ES monte carly (exploring start), meaning that if I have not seen a state before, the value of the state will be set as the mean of the coming states

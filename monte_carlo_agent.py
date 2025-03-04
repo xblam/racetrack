@@ -21,7 +21,7 @@ class MonteCarloAgent:
 
 
     def get_action(self, state):
-        # if state unknown or random, chose random action
+        # if state unknown or under epsilon, chose random action
         if state not in self.Q or np.random.rand() < self.epsilon:
             return random.choice(ACTION_SPACE)
 
@@ -40,11 +40,12 @@ class MonteCarloAgent:
         while not done and num_steps < 1000:
             num_steps += 1
             action = self.get_action(state)  # get an action
-            next_state, action, reward, done = self.env.step(action) # take a step
+            next_state, reward, done = self.env.step(action) # take a step
             episode.append((state, action, reward)) # previous state will be paired with current action
             state = next_state # then we move on to the next state
 
         return episode # return all the states and the corresponding actions and rewards
+
 
 
     # once the episode is done we will calculate the reward for each step in episode
@@ -53,82 +54,58 @@ class MonteCarloAgent:
         visited = set()
 
         # starting from the back we will calculate the reward for each step (with discount)
-        for state, action, reward in reversed(episode): 
+        for state, action, reward in reversed(episode):
             G = self.gamma * G + reward
             
-            if (state, action) not in visited: # if not visited yet thne we will update q value
+            if (state, action) not in visited: # if not visited yet then we will update q value
                 self.returns[(state, action)].append(G)
+                # if it is your first time we take average of observed rewards
                 self.Q[state][ACTION_TO_INDEX[action]] = np.mean(self.returns[(state, action)])
-                visited.add((state, action))  # Mark as visited
-    
-    
-    
-    
-    def update_q_values(self, episode, alpha=0.1):
-        """
-        Updates the Q-values using First-Visit Monte Carlo method.
-        - `alpha`: Learning rate for incremental updates (default=0.1)
-        """
-        G = 0  
-        visited = set()
+                visited.add((state, action)) # mark as visited
 
-        # calculate reward for each step in reverse
-        for state, action, reward in reversed(episode):  
-            G = self.gamma * G + reward  # Compute return
-
-            if (state, action) not in visited:  # first visit update
-                if (state, action) not in self.returns:
-                    self.returns[(state, action)] = []  # Initialize if missing
-            
-                if state not in self.Q:
-                    self.Q[state] = np.zeros(len(ACTION_SPACE))  # Initialize Q-values
-
-                # Store return for averaging
-                self.returns[(state, action)].append(G)
-
-                # Compute Q-value update
-                if alpha > 0:  # Incremental update
-                    self.Q[state][ACTION_TO_INDEX[action]] += alpha * (G - self.Q[state][ACTION_TO_INDEX[action]])
-                else:  # Full averaging
-                    self.Q[state][ACTION_TO_INDEX[action]] = np.mean(self.returns[(state, action)])
-
-                visited.add((state, action))  # Mark as visited
-
-        return {"total_reward": sum(r for _, _, r in episode), "length": len(episode)}
+        # and then we will just return total reward in episode
+        return {"total_reward": sum(reward for _, _, reward in episode), "length": len(episode)}
 
 
-    return {"total_reward": sum(r for _, _, r in episode), "length": len(episode)}
 
-
+    # this is just so that we can run the best model after training
     def improve_policy(self):
-        """Updates the policy based on the learned Q-values."""
         for state in self.Q:
             best_action_idx = np.argmax(self.Q[state])
-            self.policy[state] = ACTION_SPACE[best_action_idx]  # Store best action
+            self.policy[state] = ACTION_SPACE[best_action_idx]
+
+
 
     def train(self, episodes=10000):
-        """Runs Monte Carlo Control to train the agent."""
+        rewards = []
         for episode_num in range(episodes):
-            episode = self.generate_episode()  # Generate episode
-            self.update_q_values(episode)  # Update Q-table
-            self.improve_policy()  # Improve policy
+            episode = self.generate_episode()
+            stats = self.update_q_values(episode) # update q table with episode
+            self.improve_policy() # improve policy
 
+            rewards.append(stats["total_reward"])
+            
+            # lets us see how the model is doing
             if episode_num % 1000 == 0:
-                print(f"Training Progress: {episode_num}/{episodes} episodes")
+                avg_reward = np.mean(rewards[-1000:])
+                print(f"Episode {episode_num}/{episodes}: Avg Reward = {avg_reward:.2f}")
 
-    def simulate(self):
-        """Runs the agent using the learned policy."""
-        state = self.env.reset()
+    def simulate(self, render=True):
+        """Runs the trained agent using the learned policy and returns the path taken."""
+        state = self.env.reset()  # Start at a random position
         done = False
-        path = [state]
+        path = [state]  # Track the states visited
 
         while not done:
-            action = self.policy.get(state, random.choice(ACTION_SPACE))  # Use policy
-            next_state, _, _, done = self.env.step(action)
-            path.append(next_state)
-            state = next_state
+            action = self.policy.get(state, random.choice(ACTION_SPACE))  # Use learned policy
+            next_state, _, _, done = self.env.step(action)  # Take step
+            path.append(next_state)  # Store the new state
+            state = next_state  # Move to the next state
 
-        return path  # Return path for visualization
+            if render:
+                self.env.render()  # ✅ Optional: Print track visualization (if implemented)
+
+        return path  # Return the full path taken by the agent
 
 
 
@@ -150,10 +127,8 @@ if __name__ == "__main__":
         "################"
     ]
 
-    env = Racetrack(track1) 
-    # print(action_to_index((0, 0)))
-    # print(index_to_action(4))
-    agent = MonteCarloAgent(env)
-    state, action, reward, done = agent.env.step((0, 0))
 
-    pprint(agent.Q)
+    env = Racetrack(track1) 
+    agent = MonteCarloAgent(env)
+    agent.train(10000)
+    agent.simulate(False)

@@ -73,20 +73,18 @@ class Racetrack:
 
         # check finish line
         if self.crosses_finish_line(self.position[0], self.position[1], self.velocity[0], self.velocity[1]):
-            print('FINISH')
-            return (self.position, self.velocity), action, 100, True
+            return (self.position, self.velocity), 100, True
 
         # check out of bounds
         new_y_position = (self.position[0] - self.velocity[0]) # minus to account for the fact that the y axis is flipped
         new_x_position = (self.position[1] + self.velocity[1])
 
         if not self.is_valid_position(new_y_position, new_x_position):
-            print("POSITION INVALID")
-            return (self.reset), action, -20, True
+            return (self.reset), -20, True
 
         # if all checks pass then udpate position
         self.position = (new_y_position, new_x_position)
-        return (self.position, self.velocity), action, -1, False # impose small step penalty
+        return (self.position, self.velocity), -1, False # impose small step penalty
 
 
 
@@ -148,7 +146,7 @@ def visual_test():
         print('pos: ', env.position)
         print('vel: ', env.velocity)
         action = get_user_action()  # Get user action
-        state, action, reward, done = env.step(action)
+        state, reward, done = env.step(action)
 
         print(f'Position: {env.position}')
         print(f'Velocity: {env.velocity}')
