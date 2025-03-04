@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 from actions import *
 import pygame
 
-
-
 class Racetrack:
     # get the starting and ending blocks of track, initialize position and velocity of car
     def __init__(self, track):

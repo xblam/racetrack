@@ -3,9 +3,7 @@ import random
 from collections import defaultdict
 from racetrack import Racetrack
 from actions import *
-from pprint import pprint
-
-
+import pickle
 
 class MonteCarloAgent:
     def __init__(self, env, gamma=0.9, epsilon=0.1, episodes=10000):
@@ -98,7 +96,7 @@ class MonteCarloAgent:
 
         while not done:
             action = self.policy.get(state, random.choice(ACTION_SPACE))  # Use learned policy
-            next_state, _, _, done = self.env.step(action)  # Take step
+            next_state, _, done = self.env.step(action)  # Take step
             path.append(next_state)  # Store the new state
             state = next_state  # Move to the next state
 
@@ -106,29 +104,56 @@ class MonteCarloAgent:
                 self.env.render()  # ✅ Optional: Print track visualization (if implemented)
 
         return path  # Return the full path taken by the agent
+    
 
+
+    # save model so we dont have to rerun all the time
+    def save_model(self, filename="monte_carlo_model.pkl"):
+        model_data = {
+            "Q": dict(self.Q),  # Convert defaultdict to a normal dict
+            "policy": self.policy
+        }
+        with open(filename, "wb") as f:
+            pickle.dump(model_data, f)
+        print(f"Model saved to {filename}")
+
+
+    # Load saved model
+    def load_model(self, filename="monte_carlo_model.pkl"):
+        with open(filename, "rb") as f:
+            model_data = pickle.load(f)
+        self.Q = defaultdict(lambda: np.zeros(len(ACTION_SPACE)), model_data["Q"])
+        self.policy = model_data["policy"]
+        print(f"Model loaded from {filename}")
 
 
 if __name__ == "__main__":
-    track1 = [
-        "################",
-        "#.............F#",
-        "#.............F#",
-        "#.............F#",
-        "#.............F#",
-        "#.............F#",
-        "#.............F#",
-        "#......#########",
-        "#......#########",
-        "#......#########",
-        "#......#########",
-        "#......#########",
-        "#SSSSSS#########",
-        "################"
-    ]
+        track1 = [
+            "################",
+            "#.............F#",
+            "#.............F#",
+            "#.............F#",
+            "#.............F#",
+            "#.............F#",
+            "#.............F#",
+            "#......#########",
+            "#......#########",
+            "#......#########",
+            "#......#########",
+            "#......#########",
+            "#SSSSSS#########",
+            "################"
+        ]
+
+        env = Racetrack(track1) 
+        agent = MonteCarloAgent(env)
+
+        agent.train(10000)
+        agent.save_model()
+        
+        agent.load_model()
+        print(agent.simulate(False))
 
 
-    env = Racetrack(track1) 
-    agent = MonteCarloAgent(env)
-    agent.train(10000)
-    agent.simulate(False)
+
+
