@@ -34,8 +34,11 @@ class MonteCarloAgent:
         episode = [] # stores the states, actions, and rewards for each step
         state = self.env.reset() # reset the state
         done = False
+        num_steps = 0
 
-        while not done:
+        # loop until the episode ends
+        while not done and num_steps < 1000:
+            num_steps += 1
             action = self.get_action(state)  # get an action
             next_state, action, reward, done = self.env.step(action) # take a step
             episode.append((state, action, reward)) # previous state will be paired with current action
@@ -44,18 +47,58 @@ class MonteCarloAgent:
         return episode # return all the states and the corresponding actions and rewards
 
 
-
+    # once the episode is done we will calculate the reward for each step in episode
     def update_q_values(self, episode):
-        G = 0  # initilize sum of rewards
-        visited = set()  # Track first-visit state-action pairs
+        G = 0
+        visited = set()
 
-        for state, action, reward in reversed(episode):  # Process episode in reverse
-            G = self.gamma * G + reward  # first we are going to compute the total reward (from the state to the end)
+        # starting from the back we will calculate the reward for each step (with discount)
+        for state, action, reward in reversed(episode): 
+            G = self.gamma * G + reward
             
             if (state, action) not in visited: # if not visited yet thne we will update q value
                 self.returns[(state, action)].append(G)
                 self.Q[state][ACTION_TO_INDEX[action]] = np.mean(self.returns[(state, action)])
                 visited.add((state, action))  # Mark as visited
+    
+    
+    
+    
+    def update_q_values(self, episode, alpha=0.1):
+        """
+        Updates the Q-values using First-Visit Monte Carlo method.
+        - `alpha`: Learning rate for incremental updates (default=0.1)
+        """
+        G = 0  
+        visited = set()
+
+        # calculate reward for each step in reverse
+        for state, action, reward in reversed(episode):  
+            G = self.gamma * G + reward  # Compute return
+
+            if (state, action) not in visited:  # first visit update
+                if (state, action) not in self.returns:
+                    self.returns[(state, action)] = []  # Initialize if missing
+            
+                if state not in self.Q:
+                    self.Q[state] = np.zeros(len(ACTION_SPACE))  # Initialize Q-values
+
+                # Store return for averaging
+                self.returns[(state, action)].append(G)
+
+                # Compute Q-value update
+                if alpha > 0:  # Incremental update
+                    self.Q[state][ACTION_TO_INDEX[action]] += alpha * (G - self.Q[state][ACTION_TO_INDEX[action]])
+                else:  # Full averaging
+                    self.Q[state][ACTION_TO_INDEX[action]] = np.mean(self.returns[(state, action)])
+
+                visited.add((state, action))  # Mark as visited
+
+        return {"total_reward": sum(r for _, _, r in episode), "length": len(episode)}
+
+
+    return {"total_reward": sum(r for _, _, r in episode), "length": len(episode)}
+
 
     def improve_policy(self):
         """Updates the policy based on the learned Q-values."""

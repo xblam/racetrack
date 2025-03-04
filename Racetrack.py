@@ -145,6 +145,8 @@ def visual_test():
 
     while not done:
         env.print_track()
+        print('pos: ', env.position)
+        print('vel: ', env.velocity)
         action = get_user_action()  # Get user action
         state, action, reward, done = env.step(action)
 
