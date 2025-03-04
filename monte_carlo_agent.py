@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from collections import defaultdict
-from racetrack import Racetrack
+from racetrack import *
 from actions import *
 import pickle
 
@@ -27,7 +27,6 @@ class MonteCarloAgent:
         return ACTION_SPACE[np.argmax(self.Q[state])]
 
 
-
     def generate_episode(self):
         episode = [] # stores the states, actions, and rewards for each step
         state = self.env.reset() # reset the state
@@ -43,7 +42,6 @@ class MonteCarloAgent:
             state = next_state # then we move on to the next state
 
         return episode # return all the states and the corresponding actions and rewards
-
 
 
     # once the episode is done we will calculate the reward for each step in episode
@@ -65,7 +63,6 @@ class MonteCarloAgent:
         return {"total_reward": sum(reward for _, _, reward in episode), "length": len(episode)}
 
 
-
     # this is just so that we can run the best model after training
     def improve_policy(self):
         for state in self.Q:
@@ -73,22 +70,27 @@ class MonteCarloAgent:
             self.policy[state] = ACTION_SPACE[best_action_idx]
 
 
-
     def train(self, episodes=10000):
         rewards = []
+        completions = 0
+
         for episode_num in range(episodes):
             episode = self.generate_episode()
             stats = self.update_q_values(episode) # update q table with episode
             self.improve_policy() # improve policy
 
             rewards.append(stats["total_reward"])
+
+            if stats["total_reward"] > 0: completions += 1
             
             # lets us see how the model is doing
             if episode_num % 1000 == 0:
                 avg_reward = np.mean(rewards[-1000:])
-                print(f"Episode {episode_num}/{episodes}: Avg Reward = {avg_reward:.2f}")
+                print(f"Episode {episode_num}/{episodes}: Avg Reward = {avg_reward:.2f}, Completion Rate = {completions/1000}")
+                completions = 0 # reset count
 
-    def simulate(self, render=True):
+
+    def simulate(self):
         """Runs the trained agent using the learned policy and returns the path taken."""
         state = self.env.reset()  # Start at a random position
         done = False
@@ -99,12 +101,6 @@ class MonteCarloAgent:
             next_state, _, done = self.env.step(action)  # Take step
             path.append(next_state)  # Store the new state
             state = next_state  # Move to the next state
-
-            if render:
-                self.env.render()  # ✅ Optional: Print track visualization (if implemented)
-
-        return path  # Return the full path taken by the agent
-    
 
 
     # save model so we dont have to rerun all the time
@@ -118,7 +114,11 @@ class MonteCarloAgent:
         print(f"Model saved to {filename}")
 
 
-    # Load saved model
+    def render(self, agent):
+        visualizer = RacetrackVisualizer(self.env)
+        visualizer.run_simulation()
+
+
     def load_model(self, filename="monte_carlo_model.pkl"):
         with open(filename, "rb") as f:
             model_data = pickle.load(f)
@@ -145,14 +145,44 @@ if __name__ == "__main__":
             "################"
         ]
 
-        env = Racetrack(track1) 
+        track2 = [
+            "#############################",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#...........................#",
+            "#........###########........#",
+            "#........###########........#",
+            "#........###########........#",
+            "#S.......###########........#",
+            "#S.......###########........#",
+            "#S.......###########........#",
+            "#S.......###########........#",
+            "#S.......###########........#",
+            "#S.......###########FFFFFFFF#",
+            "#############################"
+        ]
+
+
+        env = Racetrack(track2) 
         agent = MonteCarloAgent(env)
 
-        agent.train(10000)
+        agent.train(20000)
         agent.save_model()
         
         agent.load_model()
-        print(agent.simulate(False))
+        agent.simulate()
+
+        visualizer = RacetrackVisualizer(env)
+        visualizer.run_simulation(agent)
+
+
+
 
 
 
