@@ -19,3 +19,9 @@ due to the nature of how 2d arrays work in python, we will be going with y coord
 
 the most intuitive way to implement the monte carlo agent's q table would be to just make a dictionary, where each key are the states (pos, vel, rew, end), and each of the values is essentially a dictionary of all possible moves, with predicted scores for each move.
 This means that we can search up state action pairs like this: q[state][action] = value
+
+
+
+when it comes to the monte carlo agent, i plan to make it as follows:
+1. we need to initialize it
+2. first visit to update

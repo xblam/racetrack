@@ -2,6 +2,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from actions import *
+import pygame
+
 
 
 class Racetrack:
@@ -16,11 +18,11 @@ class Racetrack:
 
 
 
-    # reset car position to random and velocity to 0 0
+    # reset car position to random and velocity to 0 0 and returns the state
     def reset(self):
         self.position = random.choice(self.start_positions)
         self.velocity = (0,0)
-        return self.position, self.velocity
+        return (self.position, self.velocity)
 
 
 
@@ -28,7 +30,6 @@ class Racetrack:
     def is_valid_position(self, x, y):
         in_bounds = 0 <= x < len(self.track) and 0 <= y < len(self.track[0])
         not_wall = self.track[x][y] != '#' if in_bounds else False # need to bounds check first
-
         return in_bounds and not_wall
 
 
@@ -45,7 +46,6 @@ class Racetrack:
             intermediate_x = x + round(i * vx / steps)
             if (intermediate_y, intermediate_x) in self.finish_positions:
                 return True
-
         return False
 
 
@@ -74,7 +74,7 @@ class Racetrack:
         # check finish line
         if self.crosses_finish_line(self.position[0], self.position[1], self.velocity[0], self.velocity[1]):
             print('FINISH')
-            return self.position, self.velocity, 100, True
+            return (self.position, self.velocity), action, 100, True
 
         # check out of bounds
         new_y_position = (self.position[0] - self.velocity[0]) # minus to account for the fact that the y axis is flipped
@@ -82,12 +82,11 @@ class Racetrack:
 
         if not self.is_valid_position(new_y_position, new_x_position):
             print("POSITION INVALID")
-            position, velocity = self.reset()
-            return position, velocity, -20, False
+            return (self.reset), action, -20, True
 
         # if all checks pass then udpate position
         self.position = (new_y_position, new_x_position)
-        return self.position, self.velocity, -1, False # impose small step penalty
+        return (self.position, self.velocity), action, -1, False # impose small step penalty
 
 
 
@@ -112,9 +111,10 @@ def get_user_action():
             return action
         except ValueError: print("Invalid input")
 
+
 def visual_test():
     tiny_track = [
-    "#####",
+    "#####",                                       
     "#S  #",
     "#  F#",
     "#   #",
@@ -146,10 +146,10 @@ def visual_test():
     while not done:
         env.print_track()
         action = get_user_action()  # Get user action
-        position, velocity, reward, done = env.step(action)
+        state, action, reward, done = env.step(action)
 
         print(f'Position: {env.position}')
-        print(f"Velocity: {env.velocity}")
+        print(f'Velocity: {env.velocity}')
         print(f'reward: {reward}')
         print(done, "\n")
 

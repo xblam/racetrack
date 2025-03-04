@@ -1,3 +1,10 @@
+# file to store all of the global variables
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (200, 200, 200)
+RED = (255, 0, 0)
+CELL_SIZE = 40
+
 ACTION_SPACE = ((-1, -1), (-1, 0), (-1, 1),
                 (0, -1),  (0, 0),  (0, 1),
                 (1, -1),  (1, 0),  (1, 1))

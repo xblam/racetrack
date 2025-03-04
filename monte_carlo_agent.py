@@ -15,85 +15,78 @@ class MonteCarloAgent:
         self.epsilon = epsilon
         self.episodes = episodes
         self.Q = defaultdict(lambda: np.zeros(len(ACTION_SPACE)))
-        self.returns = defaultdict(list)
-        self.policy = {}
+        self.returns = defaultdict(list) # keep track of returns for each state-action pair
+        self.policy = {} # we will use this to keep track of the best move for each state, use to fast lookup
+
+
+
+    def get_action(self, state):
+        # if state unknown or random, chose random action
+        if state not in self.Q or np.random.rand() < self.epsilon:
+            return random.choice(ACTION_SPACE)
+
+        # otherwise chose best action
+        return ACTION_SPACE[np.argmax(self.Q[state])]
 
 
 
     def generate_episode(self):
-        """
-        Generates an episode using the current policy with exploring starts.
-        """
-        episode = []
-        state = self.env.reset()
-
-        # Exploring starts: Random velocity from start state
-        start_velocity = (random.randint(-1, 1), random.randint(-1, 1))
-        self.env.velocity = list(start_velocity)
-
+        episode = [] # stores the states, actions, and rewards for each step
+        state = self.env.reset() # reset the state
         done = False
-        while not done:
-            action = self.get_action(state)
-            next_state, velocity, reward, done = self.env.step(action)
-            episode.append((state, action, reward))
-            state = next_state
 
-        return episode
+        while not done:
+            action = self.get_action(state)  # get an action
+            next_state, action, reward, done = self.env.step(action) # take a step
+            episode.append((state, action, reward)) # previous state will be paired with current action
+            state = next_state # then we move on to the next state
+
+        return episode # return all the states and the corresponding actions and rewards
+
+
 
     def update_q_values(self, episode):
-        """
-        Updates Q-values using the returns from an episode.
-        """
-        G = 0  # Return (discounted sum of rewards)
-        visited = set()  # Track (state, action) pairs visited
+        G = 0  # initilize sum of rewards
+        visited = set()  # Track first-visit state-action pairs
 
-        for state, action, reward in reversed(episode):
-            G = self.gamma * G + reward  # Compute return
-            if (state, action) not in visited:  # First-visit MC
+        for state, action, reward in reversed(episode):  # Process episode in reverse
+            G = self.gamma * G + reward  # first we are going to compute the total reward (from the state to the end)
+            
+            if (state, action) not in visited: # if not visited yet thne we will update q value
                 self.returns[(state, action)].append(G)
-                self.Q[state][ACTION_SPACE.index(action)] = np.mean(self.returns[(state, action)])
-                visited.add((state, action))
-
-    def get_action(self, state):
-        """
-        Selects an action using the ε-greedy policy.
-        """
-        if state not in self.policy or random.random() < self.epsilon:
-            return random.choice(self.env.action_space)  # Explore
-
-        return self.policy[state]  # Exploit
+                self.Q[state][ACTION_TO_INDEX[action]] = np.mean(self.returns[(state, action)])
+                visited.add((state, action))  # Mark as visited
 
     def improve_policy(self):
-        """
-        Updates the policy based on the learned Q-values.
-        """
+        """Updates the policy based on the learned Q-values."""
         for state in self.Q:
             best_action_idx = np.argmax(self.Q[state])
-            self.policy[state] = self.env.action_space[best_action_idx]
+            self.policy[state] = ACTION_SPACE[best_action_idx]  # Store best action
 
-    def train(self):
-        """
-        Runs Monte Carlo control for a specified number of episodes.
-        """
-        for _ in range(self.episodes):
-            episode = self.generate_episode()
-            self.update_q_values(episode)
-            self.improve_policy()
+    def train(self, episodes=10000):
+        """Runs Monte Carlo Control to train the agent."""
+        for episode_num in range(episodes):
+            episode = self.generate_episode()  # Generate episode
+            self.update_q_values(episode)  # Update Q-table
+            self.improve_policy()  # Improve policy
+
+            if episode_num % 1000 == 0:
+                print(f"Training Progress: {episode_num}/{episodes} episodes")
 
     def simulate(self):
-        """
-        Simulates a race using the learned policy.
-        """
+        """Runs the agent using the learned policy."""
         state = self.env.reset()
         done = False
         path = [state]
 
         while not done:
-            action = self.get_action(state)
-            state, _, _, done = self.env.step(action)
-            path.append(state)
+            action = self.policy.get(state, random.choice(ACTION_SPACE))  # Use policy
+            next_state, _, _, done = self.env.step(action)
+            path.append(next_state)
+            state = next_state
 
-        return path
+        return path  # Return path for visualization
+
 
 
 if __name__ == "__main__":
@@ -118,5 +111,6 @@ if __name__ == "__main__":
     # print(action_to_index((0, 0)))
     # print(index_to_action(4))
     agent = MonteCarloAgent(env)
+    state, action, reward, done = agent.env.step((0, 0))
 
     pprint(agent.Q)
