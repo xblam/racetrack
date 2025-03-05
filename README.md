@@ -1,147 +1,109 @@
-Here's your improved **README.md** in Markdown format:  
+# Monte Carlo Reinforcement Learning for Racetrack Simulation
 
-```md
-# 🏎️ Racetrack Environment & Monte Carlo Agent (Exploring Starts)
+## Author
+**Ben Lam** (📧 [bach.lam@tufts.edu](mailto:bach.lam@tufts.edu))
 
-## 📌 Overview  
-This project implements a **Racetrack environment** and a **Monte Carlo reinforcement learning agent** using **Exploring Starts (ES)**.  
-The environment models a racetrack where a car moves based on acceleration commands. The agent learns to navigate the track by optimizing its **Q-values** using **Monte Carlo control**.
+## Introduction
+This project implements a **Monte Carlo Reinforcement Learning (RL)** agent to navigate a racetrack. The goal is for the agent to reach the finish line as efficiently as possible while minimizing the number of moves. 
 
-A **Pygame visualizer** is included to display the agent’s learned behavior.
+After **20,000** rounds of training, the agent successfully learns a near-optimal policy using the **Exploring Starts (ES) Monte Carlo** approach. The trained agent completes:
+- **Small Track:** ~6 moves
+- **Large Track:** ~17 moves
 
----
+## Methodology
 
-## 🚦 Racetrack Environment
+### Racetrack Environment
+The environment is a **grid-based racetrack** with the following elements:
+- `S`: Possible **starting positions** (blue squares).
+- `F`: **Finish line** squares (green squares).
+- `#`: **Walls** that the car **cannot** pass through (black squares).
+- `.`: **Valid track** spaces (white squares).
 
-### 🔹 Initialization  
-- The racetrack is represented as a **list of strings**, where each row corresponds to a segment of the track.
-- The environment **parses this list** to identify:
-  - **Start positions (`S`)**
-  - **Finish positions (`F`)**
-  - **Walls (`#`)**
-  - **Track spaces (`.`)**
+Two racetrack layouts are used in this project:
+1. **Small Track** (16 × 14)
+2. **Large Track** (30 × 20)
 
-- The car's **initial position** is randomly set on a **start block (`S`)**, and its **velocity** is initialized to **(0,0)**.
+The large track presents a greater challenge due to an additional sharp right turn.
 
-### 🔹 State Representation  
-Each state is represented as:  
+### Action Space & Objectives
+- The car starts with **velocity (0,0)**.
+- Each action modifies the velocity using **(ay, ax) ∈ {−1, 0, 1}**, allowing **9 possible actions** at every step.
+- The velocity updates as:  
+  **v_new = v_old + a**  
+  with a **speed cap of ±5** in both x and y directions.
+- There is a **10% probability** that the agent is forced into action (0,0), meaning no movement occurs.
+- **Rewards:**
+  - **+100** for crossing the finish line.
+  - **-20** for crashing into walls or going out of bounds.
+  - **-1** for each step taken (step penalty).
 
-```
-(row, col, velocity_row, velocity_col)
-```
-- **(row, col)** → The car’s position on the track.  
-- **(velocity_row, velocity_col)** → The car’s velocity in both directions.
+## Implementation
 
-### 🔹 Actions  
-Actions are represented as **tuples**:
-```
-(acceleration in row direction, acceleration in col direction)
-```
-- Each acceleration value is in **[-1, 0, 1]**, meaning the agent can:  
-  - **Increase (+1), maintain (0), or decrease (-1) velocity** in each direction.
+### Monte Carlo Agent
+The agent uses the **Exploring Starts Monte Carlo** method with:
+- **Q-table** for state-action value estimates.
+- **ϵ-greedy policy** for decision-making.
+- **First-visit Monte Carlo updates** for Q-value improvements.
 
----
+### Training Process
+1. Reset environment and initialize state.
+2. Run an episode where the agent follows its learned policy or explores.
+3. Calculate **total discounted return (G)** at each timestep.
+4. Update Q-table using the mean of observed returns (for first visits only).
+5. Adjust the policy based on updated Q-values.
 
-## 🔄 Step Function Execution Order
-When an action is applied, the following checks occur **in order**:
+### Hyperparameters
+- **Epsilon (ϵ):** 0.1  
+- **Gamma (γ):** 0.9  
+  _(These values remained constant throughout the experiment.)_
 
-1. **Validate action** → Ensure it's within the allowed action space.
-2. **Apply random chance of "no action"** → Introduces stochasticity.
-3. **Ensure velocity remains valid** → Prevents acceleration beyond physical limits.
-4. **Update velocity** → Apply acceleration to current velocity.
-5. **Cap velocity** → Prevents excessive speed.
-6. **Check if the car crosses the finish line**:
-   - If **any part of the movement path** crosses the finish line, **reward the agent and terminate the episode**.
-7. **Update position** → Move the car based on velocity.
-8. **Check if the car is out of bounds**:
-   - If **inside track**, continue.
-   - If **out of bounds**, **penalize and restart**.
+## Results
+After **20,000** rounds:
+- **Completion Rate:**
+  - **Small Track:** ~80%
+  - **Large Track:** ~70%  
+  _(Completion rate is affected by the 10% probability of forced (0,0) actions.)_
+- The agent completes:
+  - **Small Track:** ~6 moves  
+  - **Large Track:** ~17 moves  
+- The trained policy can be visualized in **real time** by uncommenting the last four lines in `monte_carlo_agent.py`.
 
----
+### Reward Trends
+Every **1,000** training episodes, the agent's **average reward** and **completion rate** were recorded.
 
-## 🤖 Monte Carlo Agent (Exploring Starts)
+| Agent  | Track  | Average Reward | Completion Rate |
+|--------|--------|---------------|----------------|
+| Agent 1 | Small  | **Higher** (shorter track) | **Faster learning** |
+| Agent 2 | Large  | **Lower** (longer track, step penalty) | **Slower learning** |
 
-### 🔹 Q-Table Representation  
-The agent’s **Q-table** is stored as a **dictionary**, where:
+## Discussion
+While Monte Carlo learning proved effective for this task, its limitation is that it requires the agent to **complete episodes before updating the policy**. This means that for some problems, where episodes take too long or may never complete, **Monte Carlo methods may not be feasible**.
 
-```
-Q[(row, col, velocity_row, velocity_col)][action] = expected return
-```
+In such cases, alternative **online learning methods** that update after every step (instead of after each episode) could be more effective. Examples include:
+- **Temporal Difference (TD) Learning** (e.g., **SARSA**, **Q-Learning**)
+- **Deep Q-Networks (DQN)** for complex environments
 
-- **Keys**: States **(position, velocity)**.
-- **Values**: A dictionary of **all possible actions** with their respective Q-values.
+However, for this task, Monte Carlo learning performed **well**, and the agent's performance was **satisfactory**.
 
-### 🔹 Training Process  
-1. **Initialize the agent's parameters**:
-   - Set **γ (discount factor) and α (learning rate)** to basic values.
-2. **Exploring Starts (ES)**:
-   - If a state has **not been visited before**, initialize its value using the **mean of observed future returns**.
-3. **First-Visit Monte Carlo Updates**:
-   - Compute **returns (G)** for each state-action pair.
-   - Update **Q(s, a)** by averaging all observed returns.
+## Conclusion
+This project successfully implemented a Monte Carlo RL agent for racetrack navigation. The results demonstrate that the agent:
+- **Learns an efficient policy**
+- **Adapts to different track complexities**
+- **Shows clear improvement over training episodes**
 
----
+### Future Work
+- **Implement TD-learning** methods such as **SARSA** or **Q-Learning**.
+- **Use function approximation** (e.g., **Neural Networks**) instead of Q-tables.
+- **Test on more complex racetrack layouts**.
 
-## 🎮 Pygame Visualization  
-A **Pygame-based visualizer** is implemented to show the **agent’s learned behavior**.  
-The simulation runs the trained policy, displaying:
-- The **racetrack**.
-- The **car’s movement** through the track.
-- The **decision-making process** of the agent.
+## Running the Code
+To visualize the trained policy:
+1. Ensure `monte_carlo_agent.py` is in your working directory.
+2. Uncomment the last **four lines** in `monte_carlo_agent.py`.
+3. Run:
+   ```bash
+   python monte_carlo_agent.py
 
----
 
-## 📌 Summary  
-- **The racetrack is a 2D grid**, with car position tracked as **(row, col)**.
-- **Monte Carlo Exploring Starts** is used for training.
-- **Q-values are stored in a dictionary** and updated based on observed returns.
-- **A visualizer** is included for monitoring the agent’s progress.
-
----
-
-## 🏁 Running the Simulation  
-### 📥 Installation  
-Ensure you have Python installed, along with the necessary dependencies:
-
-```bash
-pip install pygame numpy
-```
-
-### ▶️ Running the Training  
-To train the agent and visualize the racetrack, run:
-
-```bash
-python monte_carlo_agent.py
-```
-
----
-
-## 🚀 Future Improvements  
-✅ Add **dynamic track generation** for different difficulty levels.  
-✅ Implement **ε-greedy exploration** to compare performance with Exploring Starts.  
-✅ Improve **visualization with real-time updates** of agent decisions.  
-
----
-
-Would you like to add:
-- Example images from the **visualizer**?  
-- A **graph of learning progress** (reward over episodes)?  
-- A section for **hyperparameter tuning** (γ, α, episodes)?  
-
-Let me know how I can improve this further! 🚗🔥
-```
-
----
-
-### **🚀 Key Improvements**
-✅ **Clear formatting with headers and bullet points**  
-✅ **Updated state representation to use `(row, col)` format**  
-✅ **Better structure for readability**  
-✅ **Added an installation & run guide**  
-
-Would you like to add:
-- **Example outputs from the trained agent**?  
-- **Performance graphs over training episodes**?  
-- **Additional details on agent behavior?**  
-
-Let me know what you'd like to enhance! 🚀🔥
+## Further Inqueries
+For further questions or comments regarding this project, feel free to reach out to me at (bach.lam@tufts.edu)!

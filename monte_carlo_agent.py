@@ -17,7 +17,6 @@ class MonteCarloAgent:
         self.policy = {} # we will use this to keep track of the best move for each state, use to fast lookup
 
 
-
     def get_action(self, state):
         # if state unknown or under epsilon, chose random action
         if state not in self.Q or np.random.rand() < self.epsilon:
@@ -72,6 +71,7 @@ class MonteCarloAgent:
 
     def train(self, episodes=10000):
         rewards = []
+        cycle_rewards = []
         completions = 0
 
         for episode_num in range(episodes):
@@ -85,9 +85,12 @@ class MonteCarloAgent:
             
             # lets us see how the model is doing
             if episode_num % 1000 == 0:
+
                 avg_reward = np.mean(rewards[-1000:])
+                cycle_rewards.append(avg_reward)
                 print(f"Episode {episode_num}/{episodes}: Avg Reward = {avg_reward:.2f}, Completion Rate = {completions/1000}")
                 completions = 0 # reset count
+        return cycle_rewards
 
 
     def simulate(self):
@@ -98,15 +101,15 @@ class MonteCarloAgent:
 
         while not done:
             action = self.policy.get(state, random.choice(ACTION_SPACE))  # Use learned policy
-            next_state, _, done = self.env.step(action)  # Take step
-            path.append(next_state)  # Store the new state
-            state = next_state  # Move to the next state
+            next_state, _, done = self.env.step(action)
+            path.append(next_state) 
+            state = next_state 
 
 
     # save model so we dont have to rerun all the time
     def save_model(self, filename="monte_carlo_model.pkl"):
         model_data = {
-            "Q": dict(self.Q),  # Convert defaultdict to a normal dict
+            "Q": dict(self.Q), 
             "policy": self.policy
         }
         with open(filename, "wb") as f:
@@ -128,58 +131,77 @@ class MonteCarloAgent:
 
 
 if __name__ == "__main__":
-        track1 = [
-            "################",
-            "#.............F#",
-            "#.............F#",
-            "#.............F#",
-            "#.............F#",
-            "#.............F#",
-            "#.............F#",
-            "#......#########",
-            "#......#########",
-            "#......#########",
-            "#......#########",
-            "#......#########",
-            "#SSSSSS#########",
-            "################"
-        ]
+    track1 = [
+        "################",
+        "#.............F#",
+        "#.............F#",
+        "#.............F#",
+        "#.............F#",
+        "#.............F#",
+        "#.............F#",
+        "#......#########",
+        "#......#########",
+        "#......#########",
+        "#......#########",
+        "#......#########",
+        "#SSSSSS#########",
+        "################"
+    ]
 
-        track2 = [
-            "#############################",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#...........................#",
-            "#........###########........#",
-            "#........###########........#",
-            "#........###########........#",
-            "#S.......###########........#",
-            "#S.......###########........#",
-            "#S.......###########........#",
-            "#S.......###########........#",
-            "#S.......###########........#",
-            "#S.......###########FFFFFFFF#",
-            "#############################"
-        ]
+    track2 = [
+        "##############################",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#............................#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#........############........#",
+        "#SSSSSSSS############FFFFFFFF#",
+        "##############################"
+    ]
 
+    env1 = Racetrack(track1) 
+    agent1 = MonteCarloAgent(env1)
+    env2 = Racetrack(track2)
+    agent2 = MonteCarloAgent(env2)
 
-        env = Racetrack(track2) 
-        agent = MonteCarloAgent(env)
+    rewards1 = agent1.train(20000)
+    agent1.save_model()
+    rewards2 = agent2.train(20000)
+    agent2.save_model()
 
-        agent.train(20000)
-        agent.save_model()
-        
-        agent.load_model()
-        agent.simulate()
+    episodes = list(range(1, len(rewards1) + 1))
 
-        visualizer = RacetrackVisualizer(env)
-        visualizer.run_simulation(agent)
+    plt.figure(figsize=(10, 5))
+    plt.plot(episodes, rewards1, label="Agent 1", alpha=0.7, color='blue')
+    plt.plot(episodes, rewards2, label="Agent 2", alpha=0.7, color='red')
+    plt.xlabel("Episodes (1000s)")
+    plt.ylabel("Total Rewards")
+    plt.title("Training Rewards of Agent 1 and Agent 2")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # agent1.load_model()
+    # agent1.simulate()
+    # visualizer = RacetrackVisualizer(env1)
+    # visualizer.run_simulation(agent1)
+ 
+    agent2.load_model()
+    agent2.simulate()
+    visualizer = RacetrackVisualizer(env2)
+    visualizer.run_simulation(agent2)
 
 
 
