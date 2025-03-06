@@ -17,7 +17,6 @@ class Racetrack:
         self.reset()
 
 
-
     # reset car position to random and velocity to 0 0 and returns the state
     def reset(self):
         self.position = random.choice(self.start_positions)
@@ -25,13 +24,11 @@ class Racetrack:
         return (self.position, self.velocity)
 
 
-
     # checks to see if car is in bounds and is not on a wall
     def is_valid_position(self, y, x):
         in_bounds = 0 <= y < len(self.track) and 0 <= x < len(self.track[0])
         not_wall = self.track[y][x] != '#' if in_bounds else False # need to bounds check first
         return in_bounds and not_wall
-
 
 
     # check to see if car is on or crosses finish line
@@ -47,7 +44,6 @@ class Racetrack:
             if (intermediate_y, intermediate_x) in self.finish_positions:
                 return True
         return False
-
 
 
     '''
@@ -87,7 +83,6 @@ class Racetrack:
         return (self.position, self.velocity), -1, False # impose small step penalty
 
 
-
     # prints out current position of car and track
     def print_track(self):
         track_copy = [list(row) for row in self.track]
@@ -97,7 +92,6 @@ class Racetrack:
         for row in track_copy:
             print(''.join(row))
         import pygame
-
 
 
 class RacetrackVisualizer:
@@ -118,7 +112,6 @@ class RacetrackVisualizer:
         self.finish_color = GREEN
 
 
-
     # go over the gameboard and draw appropriate colors
     def draw_track(self):
         for row in range(len(self.env.track)):
@@ -132,9 +125,6 @@ class RacetrackVisualizer:
                     pygame.draw.rect(self.screen, self.start_color, rect)
                 else:
                     pygame.draw.rect(self.screen, self.track_color, rect)
-
-
-
 
 
     def draw_car(self):
@@ -168,8 +158,7 @@ class RacetrackVisualizer:
         sys.exit()
 
 
-
-# takes two space separated integers as input
+# takes two space separated integers as input, used for testing
 def get_user_action():
     while True:
         try:
@@ -222,7 +211,6 @@ def visual_test():
         print(f'reward: {reward}')
         print(done, "\n")
 
-if __name__ == "__main__":
     # visual_test()
     tiny_track = [
     "#####",                                       
