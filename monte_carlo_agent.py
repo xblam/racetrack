@@ -5,6 +5,7 @@ from racetrack import *
 from actions import *
 import pickle
 
+
 class MonteCarloAgent:
     def __init__(self, env, gamma=0.9, epsilon=0.1, episodes=10000):
         # initialize values
